@@ -49,10 +49,10 @@ def login():
 	password = getpass()
 	response = post("login", {"username": username, "password": password})
 	if response.status_code == 200:
-		global token, token_timeout
+		global token, token_lifetime
 		json = response.json()
 		token = json["token"]
-		token_timeout = json["timeout"]
+		token_lifetime = json["expire"]
 		print("You are logged in")
 		return True
 	else:
@@ -66,10 +66,10 @@ def registration():
 	password = getpass()
 	response = post("registration", {"username": username, "password": password})
 	if response.status_code == 200:
-		global token, token_timeout
+		global token, token_lifetime
 		json = response.json()
 		token = json["token"]
-		token_timeout = json["timeout"]
+		token_lifetime = json["expire"]
 		print("You are registered")
 		return True
 	else:
@@ -78,12 +78,12 @@ def registration():
 
 
 def update_jwt():
-	global token, token_timeout
+	global token, token_lifetime
 	response = post("update_token", {"token": token})
 	if response.status_code == 200:
 		json = response.json()
 		token = json["token"]
-		token_timeout = json["timeout"]
+		token_lifetime = json["expire"]
 	
 
 def print_help():
@@ -107,7 +107,7 @@ if __name__ == "__main__":
 		if not check_server_address(addr):
 			exit("Invalid server address")
 	
-	global token, token_timeout
+	global token, token_lifetime
 	
 	while True:
 		cmd = check_cmd(input("\n>> "))
@@ -126,13 +126,13 @@ if __name__ == "__main__":
 	while True:
 		cmd = check_cmd(input("\n>> "))
 		
-		if token_timeout - datetime.datetime.utcnow().timestamp() < \
+		if token_lifetime - datetime.datetime.utcnow().timestamp() < \
 				datetime.timedelta(minutes = 5).total_seconds():
 			update_jwt()
 		
 		match cmd[0]:
 			case "lists":
-				response = post("lists", {"token": token})
+				response = post("get_lists", {"token": token})
 				if response.status_code != 200:
 					print(response.text)
 				else:
@@ -159,7 +159,7 @@ if __name__ == "__main__":
 					"new": cmd[2]
 					}).text)
 			case "tasks":
-				response = post("tasks", {
+				response = post("get_tasks", {
 					"token": token,
 					"list_name": cmd[1]
 					})
@@ -171,10 +171,10 @@ if __name__ == "__main__":
 						print("No tasks")
 					else:
 						for i in range(len(tasks)):
-							print(f"{i}. (task_id = {tasks[i]['task_id']})\n" +
-								f"Content: {tasks[i]['task_content']}\n" +
-								f"Deadline: {tasks[i]['task_deadline']}\n" +
-								f"Priority: {tasks[i]['task_priority']}")
+							print(f"{i}. task_id = {tasks[i]['task_id']}\n" +
+								f"  Content: {tasks[i]['task_content']}\n" +
+								f"  Deadline: {tasks[i]['task_deadline']}\n" +
+								f"  Priority: {tasks[i]['task_priority']}")
 			case "new":
 				response = post("new_task", {
 					"token": token,
