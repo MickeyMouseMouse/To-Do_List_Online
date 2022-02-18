@@ -3,36 +3,40 @@ from getpass import getpass
 
 
 def check_server_address(address):
-	return re.fullmatch("^http(s|):\/\/(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4]" +
+	return re.fullmatch("^http(s|):\/\/((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4]" +
 					"[0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4]" +
-					"[0-9]|25[0-5]):[0-9]+$", address)
+					"[0-9]|25[0-5])|localhost):[0-9]+\/$", address)
 
 
 def check_cmd(string):
 	string = string.strip()
 	
-	if re.match("^(help|\?|login|reg|exit|lists|new)$", string):
+	if re.match("^(help|\?|login|reg|exit|lists)$", string):
 		return [string]
 	
-	m = re.match("^(?P<cmd>create|delete)( )+(?P<name>[A-Za-z0-9]+)$", string) 
+	m = re.match("^(?P<cmd>create|delete)( )+(?P<list_name>[A-Za-z0-9]+)$", string) 
 	if m:
-		return [m.group("cmd"), m.group("name")]
+		return [m.group("cmd"), m.group("list_name")]
 	
 	m = re.match("^rename( )+(?P<current>[A-Za-z0-9]+)( )+(?P<new>[A-Za-z0-9]+)$", string) 
 	if m:
 		return ["rename", m.group("current"), m.group("new")]
 
-	m = re.match("^tasks( )+(?P<name>[A-Za-z0-9]+)$", string) 
+	m = re.match("^tasks( )+(?P<list_name>[A-Za-z0-9]+)$", string) 
 	if m:
-		return ["tasks", m.group("name")]
+		return ["tasks", m.group("list_name")]
 	
-	m = re.match("^rm( )+(?P<id>[0-9]+)$", string) 
+	m = re.match("^new( )+(?P<list_name>[A-Za-z0-9]+)$", string) 
 	if m:
-		return ["rm", m.group("id")]
+		return ["new", m.group("list_name")]
 	
-	m = re.match("^update( )+(?P<id>[0-9]+)$", string) 
+	m = re.match("^rm( )+(?P<list_name>[A-Za-z0-9]+)( )+(?P<task_number>[0-9]+)$", string) 
 	if m:
-		return ["update", m.group("id")]
+		return ["rm", m.group("list_name"), m.group("task_number")]
+	
+	m = re.match("^update( )+(?P<list_name>[A-Za-z0-9]+)( )+(?P<task_number>[0-9]+)$", string) 
+	if m:
+		return ["update", m.group("list_name"), m.group("task_number")]
 	
 	return [""]
 
@@ -87,16 +91,15 @@ def update_jwt():
 	
 
 def print_help():
-	print("Commands:")
-	print("  help, exit\n")
-	print("  lists")
-	print("  create <list name>")
-	print("  delete <list name>")
-	print("  rename <current list name> <new list name>\n")
-	print("  tasks <list name>")
-	print("  new")
-	print("  rm <task id>")
-	print("  update <task id>")
+	print("All lists:\t\tlists")
+	print("New list:\t\tcreate <list name>")
+	print("Delete list:\t\tdelete <list name>")
+	print("Rename list:\t\trename <current list name> <new list name>\n")
+	print("All tasks in list:\ttasks <list name>")
+	print("New task in list:\tnew <list name>")
+	print("Remove task:\t\trm <list name> <task number>")
+	print("Update task:\t\tupdate <list name> <task number>\n")
+	print("Other:\t\t\thelp, exit")
 	
 	
 if __name__ == "__main__":
@@ -105,7 +108,7 @@ if __name__ == "__main__":
 		addr = "http://127.0.0.1:5000/"
 	else:
 		if not check_server_address(addr):
-			exit("Invalid server address")
+			exit("Invalid server address (example: http://127.0.0.1:5000/)")
 	
 	global token, token_lifetime
 	
@@ -171,29 +174,31 @@ if __name__ == "__main__":
 						print("No tasks")
 					else:
 						for i in range(len(tasks)):
-							print(f"{i}. task_id = {tasks[i]['task_id']}\n" +
-								f"  Content: {tasks[i]['task_content']}\n" +
-								f"  Deadline: {tasks[i]['task_deadline']}\n" +
-								f"  Priority: {tasks[i]['task_priority']}")
+							print(f"{i}.\n" +
+								f" Content: {tasks[i]['task_content']}\n" +
+								f" Deadline: {tasks[i]['task_deadline']}\n" +
+								f" Priority: {tasks[i]['task_priority']}")
 			case "new":
 				response = post("new_task", {
 					"token": token,
+					"list_name": cmd[1],
 					"task_content": input("Content: "),
 					"task_deadline": input("Deadline: "),
-					"task_priority": input("Priority: "),
-					"list_name": input("List: ")
+					"task_priority": input("Priority: ")
 					})
 				print(f"\n{response.text}")
 			case "rm":
 				response = post("rm_task", {
 					"token": token,
-					"task_id": cmd[1]
+					"list_name": cmd[1],
+					"task_number": cmd[2]
 					})
 				print(f"\n{response.text}")
 			case "update":
 				response = post("update_task", {
 					"token": token,
-					"task_id": cmd[1],
+					"list_name": cmd[1],
+					"task_number": cmd[2],
 					"task_content": input("Content: "),
 					"task_deadline": input("Deadline: "),
 					"task_priority": input("Priority: ")

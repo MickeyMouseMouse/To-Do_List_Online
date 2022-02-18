@@ -24,7 +24,7 @@ def check_token(f):
 		if "token" not in request.form:
 			return "Token is missing", 403
 		try:
-			username =  jwt.decode(request.form["token"], app.secret_key,
+			username = jwt.decode(request.form["token"], app.secret_key,
 							algorithms = ["HS256"])["username"]
 		except jwt.InvalidTokenError:
 			app.logger.info(f"JWT validation failed [{username}]")
@@ -38,20 +38,17 @@ def registration():
 	form = request.form
 	if not ("username" in form and "password" in form):
 		return "The username and password are required", 400
-	else:
-		username, password = form["username"], form["password"]
 	
-	user = User.get_or_none(User.username == username)
+	user = User.get_or_none(User.username == form['username'])
 	if user:
-		app.logger.info(f"Registration failed [{username}]")
+		app.logger.info(f"Registration failed [{form['username']}]")
 		return "This username is already taken", 401
-	else:
-		new_user = User.create(username = username,
-			password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()))
-		List.create(list_name = "Default", user_id = new_user.user_id)
-		
-		app.logger.info(f"Successfully registered [{username}]")
-		return create_token(username), 200
+	new_user = User.create(username = form["username"],
+		password = bcrypt.hashpw(form["password"].encode(), bcrypt.gensalt()))
+	List.create(list_name = "Default", user_id = new_user.user_id)
+	
+	app.logger.info(f"Successfully registered [{form['username']}]")
+	return create_token(form['username']), 200
 
 
 @app.route("/login", methods = ['POST'])
@@ -59,16 +56,14 @@ def login():
 	form = request.form
 	if not ("username" in form and "password" in form):
 		return "The username and password are required", 400
-	else:
-		username, password = form["username"], form["password"]
 	
-	user = User.get_or_none(User.username == username)
+	user = User.get_or_none(User.username == form["username"])
 	if user:
-		if bcrypt.checkpw(password.encode(), user.password):
-			app.logger.info(f"Logged in successfully [{username}]")
-			return create_token(username), 200
+		if bcrypt.checkpw(form["password"].encode(), user.password):
+			app.logger.info(f"Logged in successfully [{form['username']}]")
+			return create_token(form["username"]), 200
 		
-	app.logger.info(f"Failed to log in [{username}]")
+	app.logger.info(f"Failed to log in [{form['username']}]")
 	return "The username or password is incorrect", 401
 
 
@@ -96,17 +91,14 @@ def create_list(username):
 	form = request.form
 	if not "list_name" in form:
 		return "The list_name is required", 400
-	else:
-		list_name = form["list_name"]
 	
 	user = User.get_or_none(User.username == username)
 	_list = List.get_or_none(List.user_id == user.user_id,
-							List.list_name == list_name)
+							List.list_name == form["list_name"])
 	if _list:
 		return "The list already exists", 400
-	else:
-		List.create(list_name = list_name, user_id = user.user_id)
-		return "The list added", 200
+	List.create(user_id = user.user_id, list_name = form["list_name"])
+	return "The list added", 200
 
 
 @app.route("/delete_list", methods = ['POST'])
@@ -115,17 +107,14 @@ def delete_list(username):
 	form = request.form
 	if not "list_name" in form:
 		return "The list_name is required", 400
-	else:
-		list_name = form["list_name"]
 	
 	user = User.get_or_none(User.username == username)
 	_list = List.get_or_none(List.user_id == user.user_id,
-							List.list_name == list_name)
+							List.list_name == form["list_name"])
 	if not _list:
 		return "The list does not exist", 400
-	else:
-		_list.delete_instance()
-		return "The list removed", 200		
+	_list.delete_instance()
+	return "The list removed", 200		
 
 
 @app.route("/rename_list", methods = ['POST'])
@@ -134,18 +123,15 @@ def rename_list(username):
 	form = request.form
 	if not ("current" in form and "new" in form):
 		return "The current and new are required", 400
-	else:
-		current, new = form["current"], form["new"]
 	
 	user = User.get_or_none(User.username == username)
 	_list = List.get_or_none(List.user_id == user.user_id,
-							List.list_name == current)
+							List.list_name == form["current"])
 	if not _list:
 		return "The list does not exist", 400
-	else:
-		_list.list_name = new
-		_list.save()
-		return "The list renamed", 200		
+	_list.list_name = form["new"]
+	_list.save()
+	return "The list renamed", 200		
 
 
 @app.route("/get_tasks", methods = ['POST'])
@@ -154,84 +140,80 @@ def get_tasks(username):
 	form = request.form
 	if not "list_name" in form:
 		return "The list_name is required", 400
-	else:
-		list_name = form["list_name"]
 	
 	user = User.get_or_none(User.username == username)
 	_list = List.get_or_none(List.user_id == user.user_id,
-							List.list_name == list_name)
+							List.list_name == form["list_name"])
 	if not _list:
 		return "There is no such list", 400
-	else:
-		tasks = Task.select().where(Task.list_id == _list.list_id).dicts().execute()
-		result = []
-		for el in tasks:
-			result.append({"task_id": el["task_id"],
-						"task_content": el["task_content"],
-						"task_deadline": el["task_deadline"],
-						"task_priority": el["task_priority"]})
-		return jsonify(result), 200
+	tasks = Task.select().where(Task.list_id == _list.list_id).dicts().execute()
+	result = []
+	for el in tasks:
+		result.append({"task_content": el["task_content"],
+					"task_deadline": el["task_deadline"],
+					"task_priority": el["task_priority"]})
+	return jsonify(result), 200
 
 
 @app.route("/new_task", methods = ['POST'])
 @check_token
 def new_task(username):
 	form = request.form
-	if not ("task_content" in form and "task_deadline" in form and
-		"task_priority" in form and "list_name" in form):
-		return f"The task_content, task_deadline, task_priority and list_name are required", 400
-	else:
-		task_content, task_deadline = form["task_content"], form["task_deadline"]
-		task_priority, list_name = form["task_priority"], form["list_name"]
+	if not ("list_name" in form and "task_content" in form and
+		"task_deadline" in form and "task_priority" in form):
+		return f"The list_name, task_content, task_deadline and task_priority are required", 400
 	
 	user = User.get_or_none(User.username == username)
 	_list = List.get_or_none(List.user_id == user.user_id,
-							List.list_name == list_name)
+							List.list_name == form["list_name"])
 	if not _list:
 		return "There is no such list", 400
-	else:
-		Task.create(task_content = task_content, task_deadline = task_deadline,
-				task_priority = task_priority, list_id = _list.list_id)
-		return "The task added", 200
+	Task.create(list_id = _list.list_id, task_content =form["task_content"],
+			task_deadline = form["task_deadline"], task_priority = form["task_priority"])
+	return "The task added", 200
 
 
 @app.route("/rm_task", methods = ['POST'])
 @check_token
 def rm_task(username):
 	form = request.form
-	if not "task_id" in form:
-		return "The task_id are required", 400
-	else:
-		task_id = form["task_id"]
+	if not ("list_name" in form and "task_number" in form):
+		return "The list_name and task_number are required", 400
 	
-	task = Task.get_or_none(Task.task_id == task_id)
-	if not task:
-		return "There is no such task", 400
-	else:
-		task.delete_instance()
+	user = User.get_or_none(User.username == username)
+	_list = List.get_or_none(List.user_id == user.user_id,
+							List.list_name == form["list_name"])
+	if not _list:
+		return "There is no such list", 400
+	try:
+		Task.select().execute()[int(form["task_number"])].delete_instance()
 		return "The task removed", 200
+	except:
+		return "Invalid request", 400
 
 
 @app.route("/update_task", methods = ['POST'])
 @check_token
 def update_task(username):
 	form = request.form
-	if not ("task_id" in form and "task_content" in form and
+	if not ("list_name" in form and "task_number" in form and "task_content" in form and
 		"task_deadline" in form and "task_priority" in form):
-		return "The task_id, task_content, task_deadline and task_priority are required", 400
-	else:
-		task_id, task_content = form["task_id"], form["task_content"]
-		task_deadline, task_priority = form["task_deadline"], form["task_priority"]
+		return "The list_name, task_number, task_content, task_deadline and task_priority are required", 400
 	
-	task = Task.get_or_none(Task.task_id == task_id)
-	if not task:
-		return "There is no such task", 400
-	else:
-		task.task_content = task_content
-		task.task_deadline = task_deadline
-		task.task_priority = task_priority
+	user = User.get_or_none(User.username == username)
+	_list = List.get_or_none(List.user_id == user.user_id,
+							List.list_name == form["list_name"])
+	if not _list:
+		return "There is no such list", 400
+	try:
+		task = Task.select().execute()[int(form["task_number"])]
+		task.task_content = form["task_content"]
+		task.task_deadline = form["task_deadline"]
+		task.task_priority = form["task_priority"]
 		task.save()
 		return "The task updated", 200
+	except:
+		return "Invalid request", 400
 
 
 if __name__ == "__main__":

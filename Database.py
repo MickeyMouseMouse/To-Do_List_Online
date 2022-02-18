@@ -26,8 +26,8 @@ class User(BaseModel):
 
 class List(BaseModel):
 	list_id = AutoField(column_name = "list_id")
-	list_name = TextField(column_name = "list_name")
 	user_id = ForeignKeyField(User)
+	list_name = TextField(column_name = "list_name")
 
 	class Meta:
 		table_name = "Lists"
@@ -35,10 +35,10 @@ class List(BaseModel):
 
 class Task(BaseModel):
 	task_id = AutoField(column_name = "task_id")
+	list_id = ForeignKeyField(List)
 	task_content = TextField(column_name = "task_content")
 	task_deadline = TextField(column_name = "task_deadline")
 	task_priority = TextField(column_name = "task_priority")
-	list_id = ForeignKeyField(List)
 
 	class Meta:
 		table_name = "Tasks"
