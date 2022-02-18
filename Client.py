@@ -30,11 +30,11 @@ def check_cmd(string):
 	if m:
 		return ["new", m.group("list_name")]
 	
-	m = re.match("^rm( )+(?P<list_name>[A-Za-z0-9]+)( )+(?P<task_number>[0-9]+)$", string) 
+	m = re.match("^rm( )+(?P<list_name>[A-Za-z0-9]+)( )+(?P<task_number>[1-9]+)$", string) 
 	if m:
 		return ["rm", m.group("list_name"), m.group("task_number")]
 	
-	m = re.match("^update( )+(?P<list_name>[A-Za-z0-9]+)( )+(?P<task_number>[0-9]+)$", string) 
+	m = re.match("^update( )+(?P<list_name>[A-Za-z0-9]+)( )+(?P<task_number>[1-9]+)$", string) 
 	if m:
 		return ["update", m.group("list_name"), m.group("task_number")]
 	
@@ -174,7 +174,7 @@ if __name__ == "__main__":
 						print("No tasks")
 					else:
 						for i in range(len(tasks)):
-							print(f"{i}.\n" +
+							print(f"{i + 1}.\n" +
 								f" Content: {tasks[i]['task_content']}\n" +
 								f" Deadline: {tasks[i]['task_deadline']}\n" +
 								f" Priority: {tasks[i]['task_priority']}")
@@ -191,14 +191,14 @@ if __name__ == "__main__":
 				response = post("rm_task", {
 					"token": token,
 					"list_name": cmd[1],
-					"task_number": cmd[2]
+					"task_number": int(cmd[2]) - 1
 					})
 				print(f"\n{response.text}")
 			case "update":
 				response = post("update_task", {
 					"token": token,
 					"list_name": cmd[1],
-					"task_number": cmd[2],
+					"task_number": int(cmd[2]) - 1,
 					"task_content": input("Content: "),
 					"task_deadline": input("Deadline: "),
 					"task_priority": input("Priority: ")

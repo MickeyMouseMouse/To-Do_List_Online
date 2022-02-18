@@ -186,7 +186,9 @@ def rm_task(username):
 	if not _list:
 		return "There is no such list", 400
 	try:
-		Task.select().execute()[int(form["task_number"])].delete_instance()
+		list(Task.select()
+				.where(Task.list_id == _list.list_id)) \
+					[int(form["task_number"])].delete_instance()
 		return "The task removed", 200
 	except:
 		return "Invalid request", 400
@@ -206,7 +208,8 @@ def update_task(username):
 	if not _list:
 		return "There is no such list", 400
 	try:
-		task = Task.select().execute()[int(form["task_number"])]
+		task = list(Task.select()
+				.where(Task.list_id == _list.list_id))[int(form["task_number"])]
 		task.task_content = form["task_content"]
 		task.task_deadline = form["task_deadline"]
 		task.task_priority = form["task_priority"]
