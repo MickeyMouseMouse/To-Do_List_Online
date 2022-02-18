@@ -1,4 +1,4 @@
-import requests, re
+import requests, re, datetime
 from getpass import getpass
 
 
@@ -49,8 +49,10 @@ def login():
 	password = getpass()
 	response = post("login", {"username": username, "password": password})
 	if response.status_code == 200:
-		global token
-		token = response.text
+		global token, token_timeout
+		json = response.json()
+		token = json["token"]
+		token_timeout = json["timeout"]
 		print("You are logged in")
 		return True
 	else:
@@ -64,8 +66,10 @@ def registration():
 	password = getpass()
 	response = post("registration", {"username": username, "password": password})
 	if response.status_code == 200:
-		global token
-		token = response.text
+		global token, token_timeout
+		json = response.json()
+		token = json["token"]
+		token_timeout = json["timeout"]
 		print("You are registered")
 		return True
 	else:
@@ -73,15 +77,22 @@ def registration():
 		return False
 
 
+def update_jwt():
+	global token, token_timeout
+	response = post("update_token", {"token": token})
+	if response.status_code == 200:
+		json = response.json()
+		token = json["token"]
+		token_timeout = json["timeout"]
+	
+
 def print_help():
 	print("Commands:")
-	print("  help, exit")
-	print()
+	print("  help, exit\n")
 	print("  lists")
 	print("  create <list name>")
 	print("  delete <list name>")
-	print("  rename <current list name> <new list name>")
-	print()
+	print("  rename <current list name> <new list name>\n")
 	print("  tasks <list name>")
 	print("  new")
 	print("  rm <task id>")
@@ -96,7 +107,7 @@ if __name__ == "__main__":
 		if not check_server_address(addr):
 			exit("Invalid server address")
 	
-	token = ""
+	global token, token_timeout
 	
 	while True:
 		cmd = check_cmd(input("\n>> "))
@@ -107,15 +118,18 @@ if __name__ == "__main__":
 			case "reg":
 				if registration():
 					break
-			case "help" | "?":
-				print_help()
 			case "exit":
 				exit()
 			case _:
-				print("Invalid command (you need 'login' or 'reg')")
+				print("Invalid command ('login', 'reg' or 'exit')")
 
 	while True:
 		cmd = check_cmd(input("\n>> "))
+		
+		if token_timeout - datetime.datetime.utcnow().timestamp() < \
+				datetime.timedelta(minutes = 5).total_seconds():
+			update_jwt()
+		
 		match cmd[0]:
 			case "lists":
 				response = post("lists", {"token": token})

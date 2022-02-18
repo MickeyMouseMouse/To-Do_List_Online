@@ -1,5 +1,8 @@
 from pathlib import Path
-from peewee import SqliteDatabase, Model, AutoField, TextField, ForeignKeyField
+from peewee import SqliteDatabase, Model, AutoField, TextField, BlobField, ForeignKeyField
+
+# https://peewee.readthedocs.io/en/latest/peewee/playhouse.html#migrate
+# from playhouse.migrate import SqliteMigrator
 
 
 DATABASE = "ToDoList.db"
@@ -15,7 +18,7 @@ class BaseModel(Model):
 class User(BaseModel):
 	user_id = AutoField(column_name = "user_id")
 	username = TextField(column_name = "username", unique = True)
-	password = TextField(column_name = "password")
+	password = BlobField(column_name = "password")
 	
 	class Meta:
 		table_name = "Users"

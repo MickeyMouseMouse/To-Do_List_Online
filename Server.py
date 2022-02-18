@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from Database import User, List, Task
-import jwt, datetime
+import jwt, datetime, logging, bcrypt
 
 
 app = Flask(__name__)
@@ -17,10 +17,14 @@ def registration():
 	
 	user = User.get_or_none(User.username == username)
 	if user:
+		app.logger.info("Registration failed")
 		return "This username is already taken", 401
 	else:
-		new_user = User.create(username = username, password = password)
+		new_user = User.create(username = username,
+			password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()))
 		List.create(list_name = "Default", user_id = new_user.user_id)
+		
+		app.logger.info("Successfully registered")
 		return create_token(username), 200
 
 
@@ -34,18 +38,31 @@ def login():
 	
 	user = User.get_or_none(User.username == username)
 	if user:
-		if user.password == password:
+		if bcrypt.checkpw(password.encode(), user.password):
+			app.logger.info("Logged in successfully")
 			return create_token(username), 200
+		
+	app.logger.info("Failed to log in")
 	return "The username or password is incorrect", 401
 
 
-def create_token(username, minutes = 30):
-	return jwt.encode(
-			{"username": username, "exp": datetime.datetime.utcnow() + 
-				datetime.timedelta(minutes = minutes)},
-			app.secret_key,
-			algorithm = "HS256"
-		)
+@app.route("/update_token", methods = ['POST'])
+def update_token():
+	form = request.form
+	if not ("token" in form):
+		return "The token is required", 400
+	else:
+		return create_token(form["username"]), 200
+
+
+def create_token(username, timeout_in_minutes = 30):
+	timeout = datetime.datetime.utcnow() + datetime.timedelta(minutes = timeout_in_minutes)
+	return {"token":
+				jwt.encode({"username": username, "exp": timeout},
+				app.secret_key,
+				algorithm = "HS256"),
+			"timeout":
+				timeout.timestamp()}
 
 
 def get_username_from_token(token):
@@ -53,6 +70,7 @@ def get_username_from_token(token):
 		return jwt.decode(token, app.secret_key,
 						algorithms = ["HS256"])["username"]
 	except jwt.InvalidTokenError:
+		app.logger.info("JWT validation failed")
 		return False
 
 
@@ -236,4 +254,7 @@ def update_task():
 
 
 if __name__ == "__main__":
-	app.run(host = "0.0.0.0", port = 5000)
+	logging.basicConfig(filename = "ToDoList.log", level = logging.DEBUG,
+		format = "[%(asctime)s] p%(process)s {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s")
+	
+	app.run(host = "localhost", port = 5000)
