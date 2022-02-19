@@ -190,7 +190,7 @@ if __name__ == "__main__":
 					})
 				print(f"\n{response.text}")
 			case "rm":
-				response = post("rm_task", {
+				response = post("remove_task", {
 					"token": token,
 					"folder_number": cmd[1] - 1,
 					"task_number": cmd[2] - 1
