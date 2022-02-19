@@ -24,18 +24,18 @@ class User(BaseModel):
 		table_name = "Users"
 
 
-class List(BaseModel):
-	list_id = AutoField(column_name = "list_id")
+class Folder(BaseModel):
+	folder_id = AutoField(column_name = "folder_id")
 	user_id = ForeignKeyField(User)
-	list_name = TextField(column_name = "list_name")
+	folder_name = TextField(column_name = "folder_name")
 
 	class Meta:
-		table_name = "Lists"
+		table_name = "Folders"
 
 
 class Task(BaseModel):
 	task_id = AutoField(column_name = "task_id")
-	list_id = ForeignKeyField(List)
+	folder_id = ForeignKeyField(Folder)
 	task_content = TextField(column_name = "task_content")
 	task_deadline = TextField(column_name = "task_deadline")
 	task_priority = TextField(column_name = "task_priority")
@@ -46,5 +46,5 @@ class Task(BaseModel):
 
 if not exists:
 	User.create_table()
-	List.create_table()
+	Folder.create_table()
 	Task.create_table()

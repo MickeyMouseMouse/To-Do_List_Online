@@ -11,32 +11,36 @@ def check_server_address(address):
 def check_cmd(string):
 	string = string.strip()
 	
-	if re.match("^(help|\?|login|reg|exit|lists)$", string):
+	if re.match("^(help|\?|login|reg|exit|folders|f)$", string):
 		return [string]
 	
-	m = re.match("^(?P<cmd>create|delete)( )+(?P<list_name>[A-Za-z0-9]+)$", string) 
+	m = re.match("^create( )+(?P<folder_name>[A-Za-z0-9]+)$", string) 
 	if m:
-		return [m.group("cmd"), m.group("list_name")]
+		return ["create", m.group("folder_name")]
 	
-	m = re.match("^rename( )+(?P<current>[A-Za-z0-9]+)( )+(?P<new>[A-Za-z0-9]+)$", string) 
+	m = re.match("^delete( )+(?P<folder_number>[1-9]+)$", string) 
 	if m:
-		return ["rename", m.group("current"), m.group("new")]
+		return ["delete", int(m.group("folder_number"))]
+	
+	m = re.match("^rename( )+(?P<folder_number>[1-9]+)( )+(?P<new_name>[A-Za-z0-9]+)$", string) 
+	if m:
+		return ["rename", int(m.group("folder_number")), m.group("new_name")]
 
-	m = re.match("^tasks( )+(?P<list_name>[A-Za-z0-9]+)$", string) 
+	m = re.match("^(tasks|t)( )+(?P<folder_number>[1-9]+)$", string) 
 	if m:
-		return ["tasks", m.group("list_name")]
+		return ["tasks", int(m.group("folder_number"))]
 	
-	m = re.match("^new( )+(?P<list_name>[A-Za-z0-9]+)$", string) 
+	m = re.match("^new( )+(?P<folder_number>[1-9]+)$", string) 
 	if m:
-		return ["new", m.group("list_name")]
+		return ["new", int(m.group("folder_number"))]
 	
-	m = re.match("^rm( )+(?P<list_name>[A-Za-z0-9]+)( )+(?P<task_number>[1-9]+)$", string) 
+	m = re.match("^rm( )+(?P<folder_number>[1-9]+)( )+(?P<task_number>[1-9]+)$", string) 
 	if m:
-		return ["rm", m.group("list_name"), m.group("task_number")]
+		return ["rm", int(m.group("folder_number")), int(m.group("task_number"))]
 	
-	m = re.match("^update( )+(?P<list_name>[A-Za-z0-9]+)( )+(?P<task_number>[1-9]+)$", string) 
+	m = re.match("^update( )+(?P<folder_number>[1-9]+)( )+(?P<task_number>[1-9]+)$", string) 
 	if m:
-		return ["update", m.group("list_name"), m.group("task_number")]
+		return ["update", int(m.group("folder_number")), int(m.group("task_number"))]
 	
 	return [""]
 
@@ -91,15 +95,18 @@ def update_jwt():
 	
 
 def print_help():
-	print("All lists:\t\tlists")
-	print("New list:\t\tcreate <list name>")
-	print("Delete list:\t\tdelete <list name>")
-	print("Rename list:\t\trename <current list name> <new list name>\n")
-	print("All tasks in list:\ttasks <list name>")
-	print("New task in list:\tnew <list name>")
-	print("Remove task:\t\trm <list name> <task number>")
-	print("Update task:\t\tupdate <list name> <task number>\n")
-	print("Other:\t\t\thelp, exit")
+	print("FOLDERS COMMANDS:")
+	print("  folders")
+	print("  create <folder name>")
+	print("  delete <folder number>")
+	print("  rename <folder number> <new folder name>\n")
+	print("TASKS COMMANDS:")
+	print("  tasks <folder number>")
+	print("  new <folder number>")
+	print("  rm <folder number> <task number>")
+	print("  update <folder number> <task number>\n")
+	print("OTHER:")
+	print("  help, exit")
 	
 	
 if __name__ == "__main__":
@@ -134,37 +141,37 @@ if __name__ == "__main__":
 			update_jwt()
 		
 		match cmd[0]:
-			case "lists":
-				response = post("get_lists", {"token": token})
+			case "folders" | "f":
+				response = post("get_folders", {"token": token})
 				if response.status_code != 200:
 					print(response.text)
 				else:
-					lists = response.json()
-					if len(lists) == 0:
-						print("No lists")
+					folders = response.json()
+					if len(folders) == 0:
+						print("No folders")
 					else:
-						for list_name in lists:
-							print(list_name)
+						for i in range(len(folders)):
+							print(f"{i + 1}. {folders[i]}")
 			case "create":
-				print(post("create_list", {
+				print(post("create_folder", {
 					"token": token,
-					"list_name": cmd[1]
+					"folder_name": cmd[1]
 					}).text)
 			case "delete":
-				print(post("delete_list", {
+				print(post("delete_folder", {
 					"token": token,
-					"list_name": cmd[1]
+					"folder_number": cmd[1] - 1
 					}).text)
 			case "rename":
-				print(post("rename_list", {
+				print(post("rename_folder", {
 					"token": token,
-					"current": cmd[1],
-					"new": cmd[2]
+					"folder_number": cmd[1] - 1,
+					"new_name": cmd[2]
 					}).text)
-			case "tasks":
+			case "tasks" | "t":
 				response = post("get_tasks", {
 					"token": token,
-					"list_name": cmd[1]
+					"folder_number": cmd[1] - 1
 					})
 				if response.status_code != 200:
 					print(response.text)
@@ -181,7 +188,7 @@ if __name__ == "__main__":
 			case "new":
 				response = post("new_task", {
 					"token": token,
-					"list_name": cmd[1],
+					"folder_number": cmd[1] - 1,
 					"task_content": input("Content: "),
 					"task_deadline": input("Deadline: "),
 					"task_priority": input("Priority: ")
@@ -190,15 +197,15 @@ if __name__ == "__main__":
 			case "rm":
 				response = post("rm_task", {
 					"token": token,
-					"list_name": cmd[1],
-					"task_number": int(cmd[2]) - 1
+					"folder_number": cmd[1] - 1,
+					"task_number": cmd[2] - 1
 					})
 				print(f"\n{response.text}")
 			case "update":
 				response = post("update_task", {
 					"token": token,
-					"list_name": cmd[1],
-					"task_number": int(cmd[2]) - 1,
+					"folder_number": cmd[1] - 1,
+					"task_number": cmd[2] - 1,
 					"task_content": input("Content: "),
 					"task_deadline": input("Deadline: "),
 					"task_priority": input("Priority: ")
