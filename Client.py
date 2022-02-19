@@ -57,10 +57,10 @@ def login():
 	password = getpass()
 	response = post("login", {"username": username, "password": password})
 	if response.status_code == 200:
-		global token, token_lifetime
+		global token, token_expire
 		json = response.json()
 		token = json["token"]
-		token_lifetime = json["expire"]
+		token_expire = json["expire"]
 		print("You are logged in")
 		return True
 	else:
@@ -74,10 +74,10 @@ def registration():
 	password = getpass()
 	response = post("registration", {"username": username, "password": password})
 	if response.status_code == 200:
-		global token, token_lifetime
+		global token, token_expire
 		json = response.json()
 		token = json["token"]
-		token_lifetime = json["expire"]
+		token_expire = json["expire"]
 		print("You are registered")
 		return True
 	else:
@@ -86,22 +86,22 @@ def registration():
 
 
 def update_jwt():
-	global token, token_lifetime
+	global token, token_expire
 	response = post("update_token", {"token": token})
 	if response.status_code == 200:
 		json = response.json()
 		token = json["token"]
-		token_lifetime = json["expire"]
+		token_expire = json["expire"]
 	
 
 def print_help():
 	print("FOLDERS COMMANDS:")
-	print("  folders")
+	print("  folders or f")
 	print("  create <folder name>")
 	print("  delete <folder number>")
 	print("  rename <folder number> <new folder name>\n")
 	print("TASKS COMMANDS:")
-	print("  tasks <folder number>")
+	print("  tasks <folder number> or t <folder number>")
 	print("  new <folder number>")
 	print("  rm <folder number> <task number>")
 	print("  update <folder number> <task number>\n")
@@ -117,7 +117,7 @@ if __name__ == "__main__":
 		if not check_server_address(addr):
 			exit("Invalid server address (example: http://127.0.0.1:5000/)")
 	
-	global token, token_lifetime
+	global token, token_expire
 	
 	while True:
 		cmd = check_cmd(input("\n>> "))
@@ -134,12 +134,7 @@ if __name__ == "__main__":
 				print("Invalid command ('login', 'reg' or 'exit')")
 
 	while True:
-		cmd = check_cmd(input("\n>> "))
-		
-		if token_lifetime - datetime.datetime.utcnow().timestamp() < \
-				datetime.timedelta(minutes = 5).total_seconds():
-			update_jwt()
-		
+		cmd = check_cmd(input("\n>> "))	
 		match cmd[0]:
 			case "folders" | "f":
 				response = post("get_folders", {"token": token})
@@ -218,3 +213,6 @@ if __name__ == "__main__":
 			case _:
 				print("Invalid command (try 'help')")
 		
+		if token_expire - datetime.datetime.utcnow().timestamp() < \
+				datetime.timedelta(minutes = 5).total_seconds():
+			update_jwt()
