@@ -1,5 +1,6 @@
 from flask import Flask, request
 from flask_restx import Api, fields, Resource
+from flask_restx.reqparse import RequestParser
 from Database import User, Folder, Task
 import jwt, datetime, logging, bcrypt
 from functools import wraps
@@ -8,7 +9,12 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = "F1M%7rJxvdi56-jZC%859uq6N(o&N24f9u)1(ryI"
 
-api = Api(app)
+api = Api(
+	app,
+	version = "1.0",
+	title = "ToDoList Service API",
+	default = "ToDoList"
+)
 
 message_model = api.model("message", {
 	"message": fields.String
@@ -63,19 +69,25 @@ def check_token(f):
 
 
 @api.route("/update_token")
+@api.expect(RequestParser()
+	.add_argument(name = "token", type = str, location = "form")
+)
 class UpdateToken(Resource):
-	@check_token
-	@api.doc(params = {"token": "string"})
 	@api.response(200, "Success", token_model)
+	@api.response(400, "Invalid request", message_model)
 	@api.response(403, "Invalid token", message_model)
 	@api.response(410, "There is no such user", message_model)
+	@check_token
 	def post(self, user):
 		return create_token(user.username), 200
 
 
 @api.route("/registration")
+@api.expect(RequestParser()
+	.add_argument(name = "username", type = str, location = "form")
+	.add_argument(name = "password", type = str, location = "form")
+)
 class UserRegistration(Resource):
-	@api.doc(params = {"username": "string", "password": "string"})
 	@api.response(200, "Success", token_model)
 	@api.response(400, "Invalid request", message_model)
 	@api.response(401, "This username is already taken", message_model)
@@ -95,8 +107,11 @@ class UserRegistration(Resource):
 
 
 @api.route("/login")
+@api.expect(RequestParser()
+	.add_argument(name = "username", type = str, location = "form")
+	.add_argument(name = "password", type = str, location = "form")
+)
 class UserLogin(Resource):
-	@api.doc(params = {"username": "string", "password": "string"})
 	@api.response(200, "Success", token_model)
 	@api.response(400, "Invalid request", message_model)
 	@api.response(401, "The username or password is incorrect", message_model)
@@ -114,12 +129,14 @@ class UserLogin(Resource):
 
 
 @api.route("/get_folders")
+@api.expect(RequestParser()
+	.add_argument(name = "token", type = str, location = "form")
+)
 class GetFolders(Resource):
-	@check_token
-	@api.doc(params = {"token": "string"})
 	@api.response(200, "Success", list_model)
 	@api.response(403, "Invalid token", message_model)
 	@api.response(410, "There is no such user", message_model)
+	@check_token
 	def post(self, user):
 		result = []
 		for el in list(Folder.select().where(Folder.user_id == user.user_id)):
@@ -128,14 +145,17 @@ class GetFolders(Resource):
 
 
 @api.route("/create_folder")
+@api.expect(RequestParser()
+	.add_argument(name = "token", type = str, location = "form")
+	.add_argument(name = "folder_name", type = str, location = "form")
+)
 class CreateFolder(Resource):
-	@check_token
-	@api.doc(params = {"token": "string", "folder_name": "string"})
 	@api.response(200, "The folder created", message_model)
 	@api.response(400, "Invalid request", message_model)
 	@api.response(403, "Invalid token", message_model)
 	@api.response(409, "The folder already exists", message_model)
 	@api.response(410, "There is no such user", message_model)
+	@check_token
 	def post(self, user):
 		f = request.form
 		if not "folder_name" in f:
@@ -150,14 +170,17 @@ class CreateFolder(Resource):
 
 
 @api.route("/delete_folder")
+@api.expect(RequestParser()
+	.add_argument(name = "token", type = str, location = "form")
+	.add_argument(name = "folder_number", type = int, location = "form")
+)
 class DeleteFolder(Resource):
-	@check_token
-	@api.doc(params = {"token": "string", "folder_number": "int"})
 	@api.response(200, "The folder deleted", message_model)
 	@api.response(400, "Invalid request", message_model)
 	@api.response(403, "Invalid token", message_model)
 	@api.response(404, "There is no such folder", message_model)
 	@api.response(410, "There is no such user", message_model)
+	@check_token
 	def post(self, user):
 		f = request.form
 		if not "folder_number" in f:
@@ -175,14 +198,18 @@ class DeleteFolder(Resource):
 
 
 @api.route("/rename_folder")
+@api.expect(RequestParser()
+	.add_argument(name = "token", type = str, location = "form")
+	.add_argument(name = "folder_number", type = int, location = "form")
+	.add_argument(name = "new_name", type = str, location = "form")
+)
 class RenameFolder(Resource):
-	@check_token
-	@api.doc(params = {"token": "string", "folder_number": "int", "new_name": "string"})
 	@api.response(200, "The folder renamed", message_model)
 	@api.response(400, "Invalid request", message_model)
 	@api.response(403, "Invalid token", message_model)
 	@api.response(404, "There is no such folder", message_model)
 	@api.response(410, "There is no such user", message_model)
+	@check_token
 	def post(self, user):
 		f = request.form
 		if not ("folder_number" in f and "new_name" in f):
@@ -199,14 +226,17 @@ class RenameFolder(Resource):
 
 
 @api.route("/get_tasks")
+@api.expect(RequestParser()
+	.add_argument(name = "token", type = str, location = "form")
+	.add_argument(name = "folder_number", type = int, location = "form")
+)
 class GetTasks(Resource):
-	@check_token
-	@api.doc(params = {"token": "string", "folder_number": "int"})
 	@api.response(200, "Success", task_list_model)
 	@api.response(400, "Invalid request", message_model)
 	@api.response(403, "Invalid token", message_model)
 	@api.response(404, "There is no such folder", message_model)
 	@api.response(410, "There is no such user", message_model)
+	@check_token
 	def post(self, user):
 		f = request.form
 		if not "folder_number" in f:
@@ -229,16 +259,20 @@ class GetTasks(Resource):
 
 
 @api.route("/new_task")
+@api.expect(RequestParser()
+	.add_argument(name = "token", type = str, location = "form")
+	.add_argument(name = "folder_number", type = int, location = "form")
+	.add_argument(name = "task_content", type = str, location = "form")
+	.add_argument(name = "task_deadline", type = str, location = "form")
+	.add_argument(name = "task_priority", type = str, location = "form")
+)
 class NewTask(Resource):
-	@check_token
-	@api.doc(params = {"token": "string", "folder_number": "int",
-		"task_content": "string", "task_deadline": "string",
-		"task_proirity": "string"})
 	@api.response(200, "The task added", message_model)
 	@api.response(400, "Invalid request", message_model)
 	@api.response(403, "Invalid token", message_model)
 	@api.response(404, "There is no such folder", message_model)
 	@api.response(410, "There is no such user", message_model)
+	@check_token
 	def post(self, user):
 		f = request.form
 		if not ("folder_number" in f and "task_content" in f and
@@ -256,15 +290,18 @@ class NewTask(Resource):
 
 
 @api.route("/remove_task")
+@api.expect(RequestParser()
+	.add_argument(name = "token", type = str, location = "form")
+	.add_argument(name = "folder_number", type = int, location = "form")
+	.add_argument(name = "task_number", type = int, location = "form")
+)
 class RemoveTask(Resource):
-	@check_token
-	@api.doc(params = {"token": "string", "folder_number": "int", 
-		"task_number": "int"})
 	@api.response(200, "The task removed", message_model)
 	@api.response(400, "Invalid request", message_model)
 	@api.response(403, "Invalid token", message_model)
 	@api.response(404, "There is no such task", message_model)
 	@api.response(410, "There is no such user", message_model)
+	@check_token
 	def post(self, user):
 		f = request.form
 		if not ("folder_number" in f and "task_number" in f):
@@ -282,17 +319,22 @@ class RemoveTask(Resource):
 
 
 @api.route("/update_task")
+@api.expect(RequestParser()
+	.add_argument(name = "token", type = str, location = "form")
+	.add_argument(name = "folder_number", type = int, location = "form")
+	.add_argument(name = "task_number", type = int, location = "form")
+	.add_argument(name = "new_folder_number", type = int, location = "form")
+	.add_argument(name = "new_content", type = str, location = "form")
+	.add_argument(name = "new_deadline", type = str, location = "form")
+	.add_argument(name = "new_priority", type = str, location = "form")
+)
 class UpdateTask(Resource):
-	@check_token
-	@api.doc(params = {"token": "string", "folder_number": "int", 
-		"task_number": "int", "new_folder_number": "int",
-		"new_content": "string", "new_deadline": "string",
-		"new_priority": "string"})
 	@api.response(200, "The task updated", message_model)
 	@api.response(400, "Invalid request", message_model)
 	@api.response(403, "Invalid token", message_model)
 	@api.response(404, "There is no such task", message_model)
 	@api.response(410, "There is no such user", message_model)
+	@check_token
 	def post(self, user):
 		f = request.form
 		if not ("folder_number" in f and "task_number" in f and
