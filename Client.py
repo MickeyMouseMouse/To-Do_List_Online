@@ -11,7 +11,7 @@ def check_server_address(address):
 def check_cmd(string):
 	string = string.strip()
 	
-	if re.match("^(help|\?|login|reg|exit|folders|f)$", string):
+	if re.match("^(help|\?|login|reg|exit|folders|f|new)$", string):
 		return [string]
 	
 	m = re.match("^create( )+(?P<folder_name>[A-Za-z0-9]+)$", string) 
@@ -29,10 +29,6 @@ def check_cmd(string):
 	m = re.match("^(tasks|t)( )+(?P<folder_number>[1-9]+)$", string) 
 	if m:
 		return ["tasks", int(m.group("folder_number"))]
-	
-	m = re.match("^new( )+(?P<folder_number>[1-9]+)$", string) 
-	if m:
-		return ["new", int(m.group("folder_number"))]
 	
 	m = re.match("^rm( )+(?P<folder_number>[1-9]+)( )+(?P<task_number>[1-9]+)$", string) 
 	if m:
@@ -187,7 +183,7 @@ if __name__ == "__main__":
 			case "new":
 				response = post("new_task", {
 					"token": token,
-					"folder_number": cmd[1] - 1,
+					"folder_number": int(input("Folder number: ")) - 1,
 					"task_content": input("Content: "),
 					"task_deadline": input("Deadline: "),
 					"task_priority": input("Priority: ")
@@ -205,9 +201,10 @@ if __name__ == "__main__":
 					"token": token,
 					"folder_number": cmd[1] - 1,
 					"task_number": cmd[2] - 1,
-					"task_content": input("Content: "),
-					"task_deadline": input("Deadline: "),
-					"task_priority": input("Priority: ")
+					"new_folder_number": int(input("New folder number: ")) - 1,
+					"new_content": input("New content: "),
+					"new_deadline": input("New deadline: "),
+					"new_priority": input("New priority: ")
 					})
 				print(f"\n{response.json()['message']}")
 			case "help" | "?":

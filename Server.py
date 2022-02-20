@@ -35,13 +35,14 @@ task_list_model = api.model("task_list", {
 def create_token(username, lifetime_minutes = 30):
 	expire = datetime.datetime.utcnow() + datetime.timedelta(
 		minutes = lifetime_minutes)
-	return {"token":
-				jwt.encode({"username": username, "exp": expire},
-				app.secret_key,
-				algorithm = "HS256"),
-			"expire":
-				expire.timestamp()
-	}
+	token = jwt.encode(
+		{"username": username, "exp": expire},
+		app.secret_key,
+		algorithm = "HS256"
+	)
+	if isinstance(token, bytes):
+		token = token.decode()
+	return {"token": token, "expire": expire.timestamp()}
 
 
 def check_token(f):
@@ -163,9 +164,11 @@ class DeleteFolder(Resource):
 			return {"message": "Invalid request"}, 400
 	
 		try:
-			list(Folder.select()
-				.where(Folder.user_id == user.user_id)) \
-					[int(f["folder_number"])].delete_instance()
+			folder = list(Folder.select()
+						.where(Folder.user_id == user.user_id))[int(f["folder_number"])]
+			for task in list(Task.select().where(Task.folder_id == folder.folder_id)):
+				task.delete_instance()
+			folder.delete_instance()
 			return {"message": "The folder deleted"}, 200
 		except:
 			return {"message": "There is no such folder"}, 404	
@@ -282,8 +285,9 @@ class RemoveTask(Resource):
 class UpdateTask(Resource):
 	@check_token
 	@api.doc(params = {"token": "string", "folder_number": "int", 
-		"task_number": "int", "task_content": "string", 
-		"task_deadline": "string", "task_priority": "string"})
+		"task_number": "int", "new_folder_number": "int",
+		"new_content": "string", "new_deadline": "string",
+		"new_priority": "string"})
 	@api.response(200, "The task updated", message_model)
 	@api.response(400, "Invalid request", message_model)
 	@api.response(403, "Invalid token", message_model)
@@ -292,17 +296,21 @@ class UpdateTask(Resource):
 	def post(self, user):
 		f = request.form
 		if not ("folder_number" in f and "task_number" in f and
-			"task_content" in f and "task_deadline" in f and "task_priority" in f):
+			"new_folder_number" in f and "new_content" in f and
+			"new_deadline" in f and "new_priority" in f):
 			return {"message": "Invalid request"}, 400
 	
 		try:
-			folder = list(Folder.select()
-				.where(Folder.user_id == user.user_id))[int(f["folder_number"])]
+			folders = list(Folder.select().where(Folder.user_id == user.user_id))
+			current_folder = folders[int(f["folder_number"])]
+			new_folder = folders[int(f["new_folder_number"])]
 			task = list(Task.select()
-				.where(Task.folder_id == folder.folder_id))[int(f["task_number"])]
-			task.task_content = f["task_content"]
-			task.task_deadline = f["task_deadline"]
-			task.task_priority = f["task_priority"]
+				.where(Task.folder_id == current_folder.folder_id))[int(f["task_number"])]
+			
+			task.folder_id = new_folder.folder_id
+			task.task_content = f["new_content"]
+			task.task_deadline = f["new_deadline"]
+			task.task_priority = f["new_priority"]
 			task.save()
 			return {"message": "The task updated"}, 200
 		except:
