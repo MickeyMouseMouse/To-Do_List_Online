@@ -56,15 +56,15 @@ def login():
 	username = input("Username: ")
 	password = getpass()
 	response = post("login", {"username": username, "password": password})
+	answer = response.json()
 	if response.status_code == 200:
 		global token, token_expire
-		json = response.json()
-		token = json["token"]
-		token_expire = json["expire"]
+		token = answer["token"]
+		token_expire = answer["expire"]
 		print("You are logged in")
 		return True
 	else:
-		print(response.text)
+		print(answer["message"])
 		return False
 
 
@@ -73,25 +73,27 @@ def registration():
 	username = input("Username: ")
 	password = getpass()
 	response = post("registration", {"username": username, "password": password})
+	answer = response.json()
 	if response.status_code == 200:
 		global token, token_expire
-		json = response.json()
-		token = json["token"]
-		token_expire = json["expire"]
+		token = answer["token"]
+		token_expire = answer["expire"]
 		print("You are registered")
 		return True
 	else:
-		print(response.text)
+		print(answer["message"])
 		return False
 
 
 def update_jwt():
 	global token, token_expire
 	response = post("update_token", {"token": token})
+	answer = response.json()
 	if response.status_code == 200:
-		json = response.json()
-		token = json["token"]
-		token_expire = json["expire"]
+		token = answer["token"]
+		token_expire = answer["expire"]
+	else:
+		print(answer["message"])
 	
 
 def print_help():
@@ -138,10 +140,11 @@ if __name__ == "__main__":
 		match cmd[0]:
 			case "folders" | "f":
 				response = post("get_folders", {"token": token})
+				answer = response.json()
 				if response.status_code != 200:
-					print(response.text)
+					print(answer["message"])
 				else:
-					folders = response.json()
+					folders = answer["list"]
 					if len(folders) == 0:
 						print("No folders")
 					else:
@@ -151,27 +154,28 @@ if __name__ == "__main__":
 				print(post("create_folder", {
 					"token": token,
 					"folder_name": cmd[1]
-					}).text)
+					}).json()["message"])
 			case "delete":
 				print(post("delete_folder", {
 					"token": token,
 					"folder_number": cmd[1] - 1
-					}).text)
+					}).json()["message"])
 			case "rename":
 				print(post("rename_folder", {
 					"token": token,
 					"folder_number": cmd[1] - 1,
 					"new_name": cmd[2]
-					}).text)
+					}).json()["message"])
 			case "tasks" | "t":
 				response = post("get_tasks", {
 					"token": token,
 					"folder_number": cmd[1] - 1
 					})
+				answer = response.json()
 				if response.status_code != 200:
-					print(response.text)
+					print(answer["message"])
 				else:
-					tasks = response.json()
+					tasks = answer["task_list"]
 					if len(tasks) == 0:
 						print("No tasks")
 					else:
@@ -188,14 +192,14 @@ if __name__ == "__main__":
 					"task_deadline": input("Deadline: "),
 					"task_priority": input("Priority: ")
 					})
-				print(f"\n{response.text}")
+				print(f"\n{response.json()['message']}")
 			case "rm":
 				response = post("remove_task", {
 					"token": token,
 					"folder_number": cmd[1] - 1,
 					"task_number": cmd[2] - 1
 					})
-				print(f"\n{response.text}")
+				print(f"\n{response.json()['message']}")
 			case "update":
 				response = post("update_task", {
 					"token": token,
@@ -205,7 +209,7 @@ if __name__ == "__main__":
 					"task_deadline": input("Deadline: "),
 					"task_priority": input("Priority: ")
 					})
-				print(f"\n{response.text}")
+				print(f"\n{response.json()['message']}")
 			case "help" | "?":
 				print_help()
 			case "exit":
