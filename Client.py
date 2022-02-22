@@ -1,4 +1,4 @@
-import requests, re, datetime
+import requests, re, datetime, prettytable as pt
 from getpass import getpass
 
 
@@ -11,7 +11,7 @@ def check_server_address(address):
 def check_cmd(string):
 	string = string.strip()
 	
-	if re.match("^(help|\?|login|reg|exit|folders|f|new)$", string):
+	if re.match("^(\?|login|reg|exit|folders|f|new)$", string):
 		return [string]
 	
 	m = re.match("^create( )+(?P<folder_name>[A-Za-z0-9]+)$", string) 
@@ -92,20 +92,23 @@ def update_jwt():
 		print(answer["message"])
 	
 
-def print_help():
-	print("FOLDERS COMMANDS:")
-	print("  folders or f")
-	print("  create <folder name>")
-	print("  delete <folder number>")
-	print("  rename <folder number> <new folder name>\n")
-	print("TASKS COMMANDS:")
-	print("  tasks <folder number> or t <folder number>")
-	print("  new <folder number>")
-	print("  rm <folder number> <task number>")
-	print("  update <folder number> <task number>\n")
-	print("OTHER:")
-	print("  help, exit")
-	
+def print_help():		
+	table = pt.PrettyTable()
+	table.field_names = ["COMMAND", "DESCRIPTION"]
+	table.add_rows([
+		["folders or f", "Show all folders"],
+		["create <folder name>", "Create a new folder"],
+		["delete <folder number>", "Delete the folder"],
+		["rename <folder number> <new name>", "Rename the folder"],
+		["tasks or t <folder number>", "Show all tasks in folder"],
+		["new <folder number>", "Create a new task in the folder"],
+		["rm <folder number> <task number>", "Remove the task"],
+		["update <folder number> <task number>", "Update the task"],
+		["?", "Show help"],
+		["exit", "Exit the script"]
+	])
+	table.align = "l"
+	print(table)
 	
 if __name__ == "__main__":
 	addr = input("Server: ")
@@ -144,8 +147,12 @@ if __name__ == "__main__":
 					if len(folders) == 0:
 						print("No folders")
 					else:
+						table = pt.PrettyTable()
+						table.field_names = ["№", "FOLDER NAME"]
 						for i in range(len(folders)):
-							print(f"{i}. {folders[i]}")
+							table.add_row([i, folders[i]])
+						table.align = "l"
+						print(table)
 			case "create":
 				print(post("create_folder", {
 					"token": token,
@@ -175,11 +182,17 @@ if __name__ == "__main__":
 					if len(tasks) == 0:
 						print("No tasks")
 					else:
+						table = pt.PrettyTable(hrules = pt.ALL)
+						table.field_names = ["№", "TASK"]
 						for i in range(len(tasks)):
-							print(f"{i}.\n" +
-								f" Content: {tasks[i]['task_content']}\n" +
-								f" Deadline: {tasks[i]['task_deadline']}\n" +
-								f" Priority: {tasks[i]['task_priority']}")
+							nested_table = pt.PrettyTable(header = False, hrules = pt.ALL)
+							nested_table.add_rows([
+								["Content", tasks[i]["task_content"]],
+								["Deadline", tasks[i]["task_deadline"]],
+								["Priority", tasks[i]["task_priority"]],
+							])
+							table.add_row([i, nested_table])
+						print(table)
 			case "new":
 				response = post("new_task", {
 					"token": token,
@@ -207,12 +220,12 @@ if __name__ == "__main__":
 					"new_priority": input("New priority: ")
 					})
 				print(f"\n{response.json()['message']}")
-			case "help" | "?":
+			case "?":
 				print_help()
 			case "exit":
 				exit()
 			case _:
-				print("Invalid command (try 'help')")
+				print("Invalid command (try '?')")
 		
 		if token_expire - datetime.datetime.utcnow().timestamp() < \
 				datetime.timedelta(minutes = 5).total_seconds():

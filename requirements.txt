@@ -4,3 +4,4 @@ PyJWT
 peewee
 bcrypt
 requests
+prettytable

@@ -1,9 +1,6 @@
 from pathlib import Path
 from peewee import SqliteDatabase, Model, AutoField, TextField, BlobField, ForeignKeyField
 
-# https://peewee.readthedocs.io/en/latest/peewee/playhouse.html#migrate
-# from playhouse.migrate import SqliteMigrator
-
 
 DATABASE = "ToDoList.db"
 exists = Path(DATABASE).exists()
