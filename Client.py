@@ -101,7 +101,7 @@ def print_help():
 		["delete <folder number>", "Delete the folder"],
 		["rename <folder number> <new name>", "Rename the folder"],
 		["tasks or t <folder number>", "Show all tasks in folder"],
-		["new <folder number>", "Create a new task in the folder"],
+		["new", "Create a new task in the folder"],
 		["rm <folder number> <task number>", "Remove the task"],
 		["update <folder number> <task number>", "Update the task"],
 		["?", "Show help"],
