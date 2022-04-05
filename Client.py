@@ -113,7 +113,7 @@ def print_help():
 if __name__ == "__main__":
 	addr = input("Server: ")
 	if len(addr) == 0:
-		addr = "http://127.0.0.1:5000/"
+		addr = "http://to-do-list-project.duckdns.org/" # "http://127.0.0.1:8000/"
 	else:
 		if not check_server_address(addr):
 			exit("Invalid server address (example: http://127.0.0.1:5000/)")

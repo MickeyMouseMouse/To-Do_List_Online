@@ -8,7 +8,9 @@ from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = "F1M%7rJxvdi56-jZC%859uq6N(o&N24f9u)1(ryI"
-
+logging.basicConfig(filename = "ToDoList.log", level = logging.DEBUG, 
+	format = "[%(asctime)s] %(levelname)s - %(message)s")
+		
 api = Api(
 	app,
 	version = "1.0",
@@ -359,8 +361,5 @@ class UpdateTask(Resource):
 			return {"message": "There is no such task"}, 404
 
 
-if __name__ == "__main__":
-	logging.basicConfig(filename = "ToDoList.log", level = logging.DEBUG,
-		format = "[%(asctime)s] %(levelname)s - %(message)s")
-	
-	app.run(host = "localhost", port = 5000)
+if __name__ == "__main__":	
+	app.run(host = "0.0.0.0", port = 8000)
