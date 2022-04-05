@@ -3,10 +3,7 @@ from getpass import getpass
 
 
 def check_server_address(address):
-	return re.fullmatch("^http(s|):\/\/((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4]" +
-					"[0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4]" +
-					"[0-9]|25[0-5])|localhost):[0-9]+\/$", address)
-
+	return re.fullmatch("^http(s|):\/\/(.)+\/$", address)
 
 def check_cmd(string):
 	string = string.strip()
@@ -43,7 +40,7 @@ def check_cmd(string):
 
 def post(route, args = None):
 	try:
-		return requests.post(addr + route, args)
+		return requests.post(addr + route, args, verify = False)
 	except requests.exceptions.ConnectionError:
 		exit("Server is disconnected")
 
@@ -113,7 +110,7 @@ def print_help():
 if __name__ == "__main__":
 	addr = input("Server: ")
 	if len(addr) == 0:
-		addr = "http://to-do-list-project.duckdns.org/" # "http://127.0.0.1:8000/"
+		addr = "https://to-do-list-project.duckdns.org/" # "http://127.0.0.1:8000/"
 	else:
 		if not check_server_address(addr):
 			exit("Invalid server address (example: http://127.0.0.1:5000/)")

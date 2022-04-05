@@ -5,3 +5,4 @@ peewee
 bcrypt
 requests
 prettytable
+gunicorn
